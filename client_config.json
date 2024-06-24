@@ -1,0 +1,17 @@
+{
+    "authToken": "",
+    "masterHost": "",
+    "username": "",
+    "apiKey": "",
+    "password": "",
+    "twoFaSecret": "",
+    "currency": "trx",
+    "bustThreshold": -1,
+    "recoverThreshold": 40,
+    "sudoPassword": "",
+    "simulationMode": "true",
+    "simulationStartBalance": 100,
+    "simulationTotalBets": 87600000,
+    "simulatedRecoveryPot": 60000,
+    "apiServer": ""
+}

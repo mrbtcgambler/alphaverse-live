@@ -9,7 +9,7 @@
     "bustThreshold": -1,
     "recoverThreshold": 40,
     "sudoPassword": "",
-    "simulationMode": "true",
+    "simulationMode": "false",
     "simulationStartBalance": 100,
     "simulationTotalBets": 87600000,
     "simulatedRecoveryPot": 60000,

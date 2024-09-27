@@ -1,8 +1,24 @@
 import fetch from 'node-fetch-retry-timeout';
-import { v4 as uuidv4 } from 'uuid' ;
+import { v4 as uuidv4 } from 'uuid';
 import twoFactor from 'node-2fa';
+import { appendFile } from 'fs/promises';
 
-export default class StakeApi {
+const getRandomNumber = (limit = 40) => {
+    const min = Math.ceil(0);
+    const max = Math.floor(limit);
+    return Math.floor(Math.random() * (max - min) + min) + " ";
+};
+
+async function logToFile(content) {
+    try {
+        // Append to a log file
+        await appendFile('mines_log.txt', content + '\n', 'utf8');
+    } catch (error) {
+        console.error('Error writing to log file:', error);
+    }
+}
+
+class StakeApi {
     apiUrl;
     apiKey;
     latency;
@@ -197,7 +213,7 @@ export default class StakeApi {
         }
 
         return this.request({
-            "query": "mutation SendTip($userId: String!, $amount: Float!, $currency: CurrencyEnum!, $isPublic: Boolean, $chatId: String!, $tfaToken: String) {\n  sendTip(\n    userId: $userId\n    amount: $amount\n    currency: $currency\n    isPublic: $isPublic\n    chatId: $chatId\n    tfaToken: $tfaToken\n  ) {\n    id\n    amount\n    currency\n    user {\n      id\n      name\n      __typename\n    }\n    sendBy {\n      id\n      name\n      balances {\n        available {\n          amount\n          currency\n          __typename\n        }\n        vault {\n          amount\n          currency\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n",
+            "query": "mutation SendTip($userId: String!, $amount: Float!, $currency: CurrencyEnum!, $isPublic: Boolean, $chatId: String!, $tfaToken: String) {\n  sendTip(\n    userId: $userId\n    amount: $amount\n    currency\n    isPublic\n    chatId\n    tfaToken\n  ) {\n    id\n    amount\n    currency\n    user {\n      id\n      name\n      __typename\n    }\n    sendBy {\n      id\n      name\n      balances {\n        available {\n          amount\n          currency\n          __typename\n        }\n        vault {\n          amount\n          currency\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n",
             "operationName": "SendTip",
             "variables": variables
         }).then(result => {
@@ -220,9 +236,28 @@ export default class StakeApi {
         });
     }
 
+    claimReload(currency) {
+        if (!currency) throw new Error('Missing parameter currency.');
+
+        const variables = {
+            "currency": currency
+        };
+        
+        return this.request({
+            "query": "query ClaimReloadMeta($currency: CurrencyEnum!) {\n  user {\n    id\n    flags {\n      flag\n    }\n    flagProgress {\n      flag\n    }\n    reload: faucet {\n      id\n      amount(currency: $currency)\n      active\n      claimInterval\n      lastClaim\n      expireAt\n      createdAt\n      updatedAt\n    }\n  }\n}\n","variables": variables
+        }).then(result => {
+            try {
+                console.log(JSON.parse(result));
+            } catch (e) {
+                console.error(e);
+                return null;
+            }
+        });
+    }
+
     diamondsBet(betSize, currency) {
         return this.request({
-            "query": "mutation DiamondsBet($amount: Float!, $currency: CurrencyEnum!, $identifier: String) {\n  diamondsBet(amount: $amount, currency: $currency, identifier: $identifier) {\n    ...CasinoBet\n    state {\n      ...CasinoGameDiamonds\n    }\n  }\n}\n\nfragment CasinoBet on CasinoBet {\n  id\n  active\n  payoutMultiplier\n  amountMultiplier\n  amount\n  payout\n  updatedAt\n  currency\n  game\n  user {\n    id\n    name\n    balances {\n      available {\n        amount\n        currency\n      }\n      vault {\n        amount\n        currency\n      }\n}\n}\n}\n\nfragment CasinoGameDiamonds on CasinoGameDiamonds {\n  hand\n}\n",
+            "query": "mutation DiamondsBet($amount: Float!, $currency: CurrencyEnum!, $identifier: String) {\n  diamondsBet(amount: $amount, currency: $currency, identifier: $identifier) {\n    ...CasinoBet\n    state {\n      ...CasinoGameDiamonds\n    }\n  }\n}\n\nfragment CasinoBet on CasinoBet {\n  id\n  active\n  payoutMultiplier\n  amountMultiplier\n  amount\n  payout\n  updatedAt\n  currency\n  game\n  user {\n    id\n    name\n    balances {\n      available {\n        amount\n        currency\n      }\n      vault {\n        amount\n        currency\n      }\n}\n}\n\nfragment CasinoGameDiamonds on CasinoGameDiamonds {\n  hand\n}\n",
             "variables": {
                 "currency": currency,
                 "amount": betSize,
@@ -235,9 +270,9 @@ export default class StakeApi {
         if (betHigh) {
             chance = 100 - chance;
         }
-        
+
         return this.request({
-            "query": "mutation DiceRoll($amount: Float!, $target: Float!, $condition: CasinoGameDiceConditionEnum!, $currency: CurrencyEnum!, $identifier: String!) {\n  diceRoll(\n    amount: $amount\n    target: $target\n    condition: $condition\n    currency: $currency\n    identifier: $identifier\n  ) {\n    ...CasinoBet\n    state {\n      ...CasinoGameDice\n    }\n  }\n}\n\nfragment CasinoBet on CasinoBet {\n  id\n  active\n  payoutMultiplier\n  amountMultiplier\n  amount\n  payout\n  updatedAt\n  currency\n  game\n  user {\n    id\n    name\n    balances {\n      available {\n        amount\n        currency\n      }\n      vault {\n        amount\n        currency\n      }\n      __typename\n    }\n  }\n}\n\nfragment CasinoGameDice on CasinoGameDice {\n  result\n  target\n  condition\n}\n",
+            "query": "mutation DiceRoll($amount: Float!, $target: Float!, $condition: CasinoGameDiceConditionEnum!, $currency: CurrencyEnum!, $identifier: String!) {\n  diceRoll(\n    amount: $amount\n    target: $target\n    condition: $condition\n    currency: $currency\n    identifier: $identifier\n  ) {\n    ...CasinoBet\n    state {\n      ...CasinoGameDice\n    }\n  }\n}\n\nfragment CasinoBet on CasinoBet {\n  id\n  active\n  payoutMultiplier\n  amountMultiplier\n  amount\n  payout\n  updatedAt\n  currency\n  game\n  user {\n    id\n    name\n    balances {\n      available {\n        amount\n        currency\n        __typename\n      }\n      vault {\n        amount\n        currency\n        __typename\n      }\n      __typename\n    }\n  }\n}\n\nfragment CasinoGameDice on CasinoGameDice {\n  result\n  target\n  condition\n}\n",
             "variables": {
                 "target": chance,
                 "condition": betHigh ? "above" : "below",
@@ -292,7 +327,7 @@ fragment CasinoBet on CasinoBet {
                 amount
                 currency
             }
-            
+
             vault {
                 amount
                 currency
@@ -321,6 +356,122 @@ fragment CasinoGameDragonTower on CasinoGameDragonTower {
                 "identifier": uuidv4(),
                 "multiplierTarget": parseFloat(target.toFixed(2))
             }
+        });
+    }
+
+    baccaratBet(tie, player, banker, currency) {
+        return this.request({
+            "query": `
+                mutation BaccaratBet(
+                    $currency: CurrencyEnum!,
+                    $identifier: String!,
+                    $tie: Float!,
+                    $player: Float!,
+                    $banker: Float!
+                ) {
+                    baccaratBet(
+                        currency: $currency,
+                        identifier: $identifier,
+                        tie: $tie,
+                        player: $player,
+                        banker: $banker
+                    ) {
+                        ...CasinoBet
+                        state {
+                            ...CasinoGameBaccarat
+                        }
+                    }
+                }
+
+                fragment CasinoBet on CasinoBet {
+                    id
+                    active
+                    payoutMultiplier
+                    amountMultiplier
+                    amount
+                    payout
+                    updatedAt
+                    currency
+                    game
+                    user {
+                        id
+                        name
+                        balances {
+                            available {
+                                amount
+                                currency
+                            }
+                            vault {
+                                amount
+                                currency
+                            }
+                        }
+                    }
+                }
+
+                fragment CasinoGameBaccarat on CasinoGameBaccarat {
+                    playerCards {
+                        suit
+                        rank
+                    }
+                    bankerCards {
+                        suit
+                        rank
+                    }
+                    tie
+                    player
+                    banker
+                    result
+                }
+            `,
+            "variables": {
+                "currency": currency,
+                "identifier": uuidv4(),
+                "tie": tie,
+                "player": player,
+                "banker": banker
+            }
+        });
+    }
+
+    BlackjackNextBet(action) {
+        return this.request({
+            query:
+                "mutation BlackjackNext($action: BlackjackNextActionInput!, $identifier: String!) {\n  blackjackNext(action: $action, identifier: $identifier) {\n    ...CasinoBet\n    state {\n      ...CasinoGameBlackjack\n    }\n  }\n}\n\nfragment CasinoBet on CasinoBet {\n  id\n  active\n  payoutMultiplier\n  amountMultiplier\n  amount\n  payout\n  updatedAt\n  currency\n  game\n  user {\n    id\n    name\n  }\n}\n\nfragment CasinoGameBlackjack on CasinoGameBlackjack {\n  player {\n    value\n    actions\n    cards {\n      rank\n      suit\n    }\n  }\n  dealer {\n    value\n    actions\n    cards {\n      rank\n      suit\n    }\n  }\n}\n",
+            variables: {
+                action: action,
+                identifier: getRandomNumber(100000),
+            },
+        });
+    }
+
+    BlackjackActiveBet() {
+        return this.request({
+            query:
+                "query BlackjackActiveBet {\n  user {\n    id\n    activeCasinoBet(game: blackjack) {\n      ...CasinoBet\n      state {\n        ...CasinoGameBlackjack\n      }\n    }\n  }\n}\n\nfragment CasinoBet on CasinoBet {\n  id\n  active\n  payoutMultiplier\n  amountMultiplier\n  amount\n  payout\n  updatedAt\n  currency\n  game\n  user {\n    id\n    name\n  }\n}\n\nfragment CasinoGameBlackjack on CasinoGameBlackjack {\n  player {\n    value\n    actions\n    cards {\n      rank\n      suit\n    }\n  }\n  dealer {\n    value\n    actions\n    cards {\n      rank\n      suit\n    }\n  }\n}\n",
+        });
+    }
+
+    BlackjackBet(betSize, currency) {
+        return this.request({
+            query:
+                "mutation BlackjackBet($amount: Float!, $currency: CurrencyEnum!, $identifier: String!) {\n  blackjackBet(amount: $amount, currency: $currency, identifier: $identifier) {\n    ...CasinoBet\n    state {\n      ...CasinoGameBlackjack\n    }\n  }\n}\n\nfragment CasinoBet on CasinoBet {\n  id\n  active\n  payoutMultiplier\n  amountMultiplier\n  amount\n  payout\n  updatedAt\n  currency\n  game\n  user {\n    id\n    name\n  }\n}\n\nfragment CasinoGameBlackjack on CasinoGameBlackjack {\n  player {\n    value\n    actions\n    cards {\n      rank\n      suit\n    }\n  }\n  dealer {\n    value\n    actions\n    cards {\n      rank\n      suit\n    }\n  }\n}\n",
+            variables: {
+                currency: currency,
+                amount: betSize,
+                identifier: getRandomNumber(100000),
+            },
+        });
+    }
+
+    BlackjackInsurance(action, identifier) {
+        return this.request({
+            query:
+                "mutation BlackjackInsurance($action: BlackjackNextActionInput!, $identifier: String!) {\n  blackjackInsurance(action: $action, identifier: $identifier) {\n    ...CasinoBet\n    state {\n      ...CasinoGameBlackjack\n    }\n  }\n}\n\nfragment CasinoBet on CasinoBet {\n  id\n  active\n  payoutMultiplier\n  amountMultiplier\n  amount\n  payout\n  updatedAt\n  currency\n  game\n  user {\n    id\n    name\n  }\n}\n\nfragment CasinoGameBlackjack on CasinoGameBlackjack {\n  player {\n    value\n    actions\n    cards {\n      rank\n      suit\n    }\n  }\n  dealer {\n    value\n    actions\n    cards {\n      rank\n      suit\n    }\n  }\n}\n",
+            variables: {
+                action: action,
+                identifier: identifier,
+            },
         });
     }
 
@@ -372,7 +523,7 @@ fragment CasinoBet on CasinoBet {
                 amount
                 currency
             }
-            
+
             vault {
                 amount
                 currency
@@ -406,6 +557,182 @@ fragment RouletteStateFragment on CasinoGameRoulette {
 }`
         });
     }
+
+    minesBet(betSize, minesCount, currency) {
+        return this.request({
+            query: `
+                mutation MinesBet($amount: Float!, $currency: CurrencyEnum!, $minesCount: Int!, $identifier: String!) {
+                    minesBet(amount: $amount, currency: $currency, minesCount: $minesCount, identifier: $identifier) {
+                        ...CasinoBet
+                        state {
+                            ...CasinoGameMines
+                        }
+                    }
+                }
+                fragment CasinoBet on CasinoBet {
+                    id
+                    active
+                    payoutMultiplier
+                    amountMultiplier
+                    amount
+                    payout
+                    updatedAt
+                    currency
+                    game
+                    user {
+                        id
+                        name
+                        balances {
+                            available {
+                                amount
+                                currency
+                            }
+                            vault {
+                                amount
+                                currency
+                            }
+                        }
+                    }
+                }
+                fragment CasinoGameMines on CasinoGameMines {
+                    mines
+                    minesCount
+                    rounds {
+                        field
+                        payoutMultiplier
+                    }
+                }
+            `,
+            variables: {
+                amount: betSize,
+                currency: currency,
+                minesCount: minesCount,
+                identifier: uuidv4()  // Generate a unique identifier using uuidv4
+            }
+        });
+    }
+
+    minesNext(selectedTiles) {
+        const requestPayload = {
+            query: `
+                mutation MinesNext($fields: [Int!]!, $identifier: String!) {
+                    minesNext(fields: $fields, identifier: $identifier) {
+                        ...CasinoBet
+                        state {
+                            ...CasinoGameMines
+                        }
+                    }
+                }
+                fragment CasinoBet on CasinoBet {
+                    id
+                    active
+                    payoutMultiplier
+                    amountMultiplier
+                    amount
+                    payout
+                    updatedAt
+                    currency
+                    game
+                    user {
+                        id
+                        name
+                    }
+                }
+                fragment CasinoGameMines on CasinoGameMines {
+                    mines
+                    minesCount
+                    rounds {
+                        field
+                        payoutMultiplier
+                    }
+                }
+            `,
+            variables: {
+                fields: selectedTiles,
+                identifier: uuidv4()  // Generate the identifier using uuidv4
+            }
+        };
+    
+        // Log the request payload
+        //logToFile(`Sending request to minesNext: ${JSON.stringify(requestPayload)}`);
+    
+        return this.request(requestPayload).then(async (result) => {
+            // Log the result
+            //await logToFile(`Response from minesNext: ${result}`);
+            return result;
+        }).catch(async (error) => {
+            // Log the error
+            //await logToFile(`Error in minesNext: ${error}`);
+            throw error;
+        });
+    }
+        
+//test3     
+
+minesCashout() {
+    return this.request({
+        query: `
+            mutation MinesCashout($identifier: String!) {
+                minesCashout(identifier: $identifier) {
+                    ...CasinoBet
+                    state {
+                        ...CasinoGameMines
+                    }
+                }
+            }
+            fragment CasinoBet on CasinoBet {
+                id
+                active
+                payoutMultiplier
+                amountMultiplier
+                amount
+                payout
+                updatedAt
+                currency
+                game
+                user {
+                    id
+                    name
+                }
+            }
+            fragment CasinoGameMines on CasinoGameMines {
+                mines
+                minesCount
+                rounds {
+                    field
+                    payoutMultiplier
+                }
+            }
+        `,
+        variables: {
+            identifier: uuidv4()  // Generate a unique identifier using uuidv4()
+        }
+    });
+}
+
+getActiveGame() {
+    return this.request({
+        query: `
+            query GetActiveMinesGame {
+                user {
+                    activeCasinoBet(game: mines) {
+                        id
+                        active
+                        payoutMultiplier
+                        amount
+                        currency
+                    }
+                }
+            }
+        `
+    }).then(result => {
+        const activeBet = JSON.parse(result).data.user.activeCasinoBet;
+        return activeBet && activeBet.active ? activeBet : null;
+    }).catch(error => {
+        console.error('[ERROR] Fetching active game:', error);
+        return null;
+    });
+}
 
     claimRakeBack() {
         return this.request({
@@ -459,3 +786,5 @@ fragment RouletteStateFragment on CasinoGameRoulette {
         return token;
     }
 }
+
+export default StakeApi;

@@ -184,13 +184,38 @@ class StakeApi {
         if (!currency) throw new Error('Missing parameter `currency`.');
         if (!amount) return;
         if (!receiver) throw new Error('Missing parameter `receiver`.');
-
-        amount -= 0.00000001;
-
+    
+        amount -= 0.00000001;  // Ensures the amount is slightly adjusted as per your logic
+    
         const receiverUserId = await this.request({
-            "query": "query SendTipMeta($name: String) {\n  user(name: $name) {\n    id\n    name\n    __typename\n  }\n  self: user {\n    id\n    hasTfaEnabled\n    isTfaSessionValid\n    balances {\n      available {\n        amount\n        currency\n        __typename\n      }\n      vault {\n        amount\n        currency\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n",
-            "operationName": "SendTipMeta",
-            "variables": {"name": receiver}
+            query: `query SendTipMeta($name: String) {
+                user(name: $name) {
+                    id
+                    name
+                    __typename
+                }
+                self: user {
+                    id
+                    hasTfaEnabled
+                    isTfaSessionValid
+                    balances {
+                        available {
+                            amount
+                            currency
+                            __typename
+                        }
+                        vault {
+                            amount
+                            currency
+                            __typename
+                        }
+                        __typename
+                    }
+                    __typename
+                }
+            }`,
+            operationName: "SendTipMeta",
+            variables: { name: receiver }
         }).then(result => {
             try {
                 return JSON.parse(result).data.user.id;
@@ -199,23 +224,54 @@ class StakeApi {
                 return null;
             }
         });
-
+    
         const variables = {
-            "userId": receiverUserId,
-            "amount": amount,
-            "currency": currency,
-            "isPublic": false,
-            "chatId": "f0326994-ee9e-411c-8439-b4997c187b95"
+            userId: receiverUserId,
+            amount: parseFloat(amount),  // Make sure the amount is parsed as a float
+            currency: currency,
+            isPublic: false,  // Make sure this matches your requirements for the tip (public/private)
+            chatId: "f0326994-ee9e-411c-8439-b4997c187b95"  // Replace with your correct chatId
         };
-
+    
         if (twoFaSecret) {
             variables.tfaToken = await this.generateTwoFaToken(twoFaSecret);
         }
-
+    
         return this.request({
-            "query": "mutation SendTip($userId: String!, $amount: Float!, $currency: CurrencyEnum!, $isPublic: Boolean, $chatId: String!, $tfaToken: String) {\n  sendTip(\n    userId: $userId\n    amount: $amount\n    currency\n    isPublic\n    chatId\n    tfaToken\n  ) {\n    id\n    amount\n    currency\n    user {\n      id\n      name\n      __typename\n    }\n    sendBy {\n      id\n      name\n      balances {\n        available {\n          amount\n          currency\n          __typename\n        }\n        vault {\n          amount\n          currency\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n",
-            "operationName": "SendTip",
-            "variables": variables
+            query: `mutation SendTip($amount: Float!, $chatId: String!, $currency: CurrencyEnum!, $tfaToken: String, $userId: String!, $isPublic: Boolean) {
+                sendTip(
+                    amount: $amount
+                    chatId: $chatId
+                    currency: $currency
+                    isPublic: $isPublic
+                    tfaToken: $tfaToken
+                    userId: $userId
+                ) {
+                    id
+                    amount
+                    currency
+                    user {
+                        id
+                        name
+                    }
+                    sendBy {
+                        id
+                        name
+                        balances {
+                            available {
+                                amount
+                                currency
+                            }
+                            vault {
+                                amount
+                                currency
+                            }
+                        }
+                    }
+                }
+            }`,
+            operationName: "SendTip",
+            variables: variables
         }).then(result => {
             try {
                 console.log(JSON.parse(result));
@@ -225,6 +281,7 @@ class StakeApi {
             }
         });
     }
+    
 
     resetSeed() {
         return this.request({

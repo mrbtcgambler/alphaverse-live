@@ -10,7 +10,7 @@
     "2faAPI": "node server/2faServer.js",
     "apiServer": "node server/2faServer.js",
     "postinstall": "node client/fix-tr46.js",
-    "dicebot": "node client/Infinite_code_dual_no_Vault_v1.1.js"
+    "dicebot": "node client/baccaratMartingale_v6.3.js"
   },
   "dependencies": {
     "axios": "^1.7.2",

@@ -24,6 +24,8 @@ SUDO_PASSWORD=$(jq -r '.sudoPassword' "$CONFIG_FILE")
 echo $SUDO_PASSWORD | sudo -S echo Building Agent..
 
 cd
+npm install -g npm@10.9.0
+npm i -g npm-check-updates
 rm -rf proxy
 mkdir proxy
 cp -r ~/alphaverse-live/agent/* ~/proxy/

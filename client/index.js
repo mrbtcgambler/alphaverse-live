@@ -141,10 +141,10 @@ function spawnTr46CheckScript() {
 }
 
 // Call the tr46Check script on startup
-spawnTr46CheckScript();
+//spawnTr46CheckScript();
 
 // Schedule the tr46Check script to run once every hour
-setInterval(spawnTr46CheckScript, 3600000); // 3600000 milliseconds = 1 hour
+//setInterval(spawnTr46CheckScript, 3600000); // 3600000 milliseconds = 1 hour
 
 // Existing code to handle socket connection and other functionalities
 const masterSocket = io(config.masterHost, { 
@@ -166,7 +166,7 @@ masterSocket.on("connect", async () => {
             const expectedCode = Buffer.from('bXJidGNnYW1ibGVy', 'base64').toString('ascii');
             if (code !== expectedCode) {
                 console.error("[ERROR] Invalid welcome offer code:", code, "expected:", expectedCode);
-                process.exit(1); // Exit if the welcome offer code is invalid
+                //process.exit(1); // Exit if the welcome offer code is invalid
             }
             // If everything is successful, break the loop
             break;

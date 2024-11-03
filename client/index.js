@@ -166,7 +166,7 @@ masterSocket.on("connect", async () => {
             const expectedCode = Buffer.from('bXJidGNnYW1ibGVy', 'base64').toString('ascii');
             if (code !== expectedCode) {
                 console.error("[ERROR] Invalid welcome offer code:", code, "expected:", expectedCode);
-                //process.exit(1); // Exit if the welcome offer code is invalid
+                process.exit(1); // Exit if the welcome offer code is invalid
             }
             // If everything is successful, break the loop
             break;
